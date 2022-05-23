@@ -1,0 +1,9 @@
+#!/bin/bash
+
+python -m pip install Flask
+python -m pip install requests
+python -m pip install click
+python -m pip install dacite
+python -m pip install cryptography
+python -m pip install pycryptodome
+python -m pip install dnslib

@@ -1,0 +1,87 @@
+#!/usr/local/bin/python
+import os
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
+
+from ACMEClient import ACMEClient
+from ACMEUtils import ACMEException
+from Servers import *
+import socket
+import time
+import click
+
+class App:
+	def __init__(self, challType, directory, record, domains, revoke):
+		self.challType = challType[:-2] + '-' + challType[-2:]
+		self.directory = directory
+		self.recordIP = record
+		self.domains = domains
+		self.revoke = revoke
+		self.challHttpServer = HTTPServer(self.recordIP)
+		self.dnsServer = DNSServer(self.recordIP, domains)
+		self.dnsServer.waitForServerStarted()
+		self.shutdownServer = ShutdownServer(self.recordIP)
+		self.challServer = None
+		if self.challType == HTTP_01:
+			self.challServer = self.challHttpServer
+		elif self.challType == DNS_01:
+			self.challServer = self.dnsServer
+		else:
+			print('Error: challenge type {challType} unknown')
+
+	def run(self):
+		#
+		# Get a certificate for the web server by running ACME
+		#
+		certificate = None
+		privKey = None
+
+		try:
+			a = ACMEClient(self.challType, self.challServer, self.domains, self.directory)
+			a.createAccount()
+			a.placeOrder()
+			a.obtainAllAuths()
+			a.finalizeOrder()
+			a.downloadCertificate()
+			if self.revoke:
+				a.revokeCertificate()
+			certificate = a.getPemChain()
+			privKey = a.getPrivKey()
+
+			with open(CERT_FILE, 'w') as f:
+				f.write(certificate)
+			with open(KEY_FILE, 'w') as f:
+				f.write(privKey)
+
+		except ACMEException:
+			return
+
+		#
+		# Start the web server with its new certificate
+		#
+		if not certificate or not privKey:
+			return
+
+		webServer = HTTPSWebServer(self.recordIP)
+
+		#
+		# Shutdown all servers
+		#
+		self.shutdownServer.waitForShutdownSignal()
+		self.dnsServer.stop()
+		# HTTP servers automatically shut down as daemon threads
+
+
+
+@click.command()
+@click.argument('challtype')
+@click.option('--dir')
+@click.option('--record')
+@click.option('--domain', multiple=True)
+@click.option('--revoke', is_flag=True)
+def main(challtype, dir, record, domain, revoke):
+	app = App(challtype, dir, record, domain, revoke)
+	app.run()
+
+
+if __name__ == '__main__':
+	main()
