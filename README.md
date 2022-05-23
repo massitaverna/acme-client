@@ -1,8 +1,9 @@
 # acme-client
 An RFC-compliant implementation of an ACME client (see [RFC8555](https://datatracker.ietf.org/doc/html/rfc8555))
+
 Implemented with Python3.
 
-The software not only runs the ACME clients, but also sets up a DNS and an HTTP server to serve ACME challenges and a HTTPS server with the obtained certificate,
+The software not only runs the ACME client, but also sets up a DNS server and a HTTP server to serve ACME challenges and a HTTPS server with the obtained certificate,
 for demonstration purposes.
 
 ## Download and install the software
@@ -31,6 +32,7 @@ _(optional)_ If present, the application immediately revokes the certificate aft
 In both cases, your application starts its HTTPS server and set it up to use the newly obtained certificate.
 
 **Example:**
+
 Consider the following invocation of `run`:
 ```
 run dns01 --dir https://example.com/dir --record 1.2.3.4 --domain one.website.org --domain two.website.org
